@@ -1,0 +1,67 @@
+services:
+  # ===== Backend API =====
+  - type: web
+    name: foodtalent-backend
+    runtime: docker
+    repo: https://github.com/adrianestebanrodriguez/foodtalent
+    region: ohio
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: foodtalent-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GOOGLE_CSE_API_KEY
+        sync: false
+      - key: GOOGLE_CSE_ID
+        sync: false
+      - key: CORS_ORIGINS
+        value: '["https://foodtalent-frontend.onrender.com"]'
+
+  # ===== Celery Worker =====
+  - type: worker
+    name: foodtalent-worker
+    runtime: docker
+    repo: https://github.com/adrianestebanrodriguez/foodtalent
+    region: ohio
+    dockerfilePath: ./backend/Dockerfile
+    command: celery -A app.tasks.celery_app worker -l info -Q profile_processing,search_processing,youtube_ingestion,web_ingestion
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: foodtalent-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # ===== Frontend =====
+  - type: web
+    name: foodtalent-frontend
+    env: node
+    repo: https://github.com/adrianestebanrodriguez/foodtalent
+    region: ohio
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -p $PORT
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NEXT_PUBLIC_API_URL
+        value: https://foodtalent-backend.onrender.com
+
+databases:
+  - name: foodtalent-db
+    region: ohio
+    databaseName: foodtalent
+    user: foodtalent_user
+    plan: free
