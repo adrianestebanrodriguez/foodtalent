@@ -5,10 +5,18 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from pgvector.sqlalchemy import Vector
 from app.core.config import get_settings
+import asyncio
+import logging
 
 settings = get_settings()
 
-engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
+# Ensure SSL mode for Render PostgreSQL
+database_url = settings.DATABASE_URL
+if "sslmode" not in database_url:
+    separator = "&" if "?" in database_url else "?"
+    database_url = f"{database_url}{separator}sslmode=require"
+
+engine = create_async_engine(database_url, echo=settings.DEBUG)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
@@ -82,6 +90,20 @@ class Professional(Base):
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        await conn.run_sync(Base.metadata.create_all)
+    max_retries = 10
+    base_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                await conn.run_sync(Base.metadata.create_all)
+            logging.info("Database initialized successfully")
+            return
+        except Exception as e:
+            if attempt == max_retries - 1:
+                logging.error(f"Failed to initialize database after {max_retries} attempts: {e}")
+                raise
+            delay = base_delay * (2 ** attempt)
+            logging.warning(f"Database connection failed (attempt {attempt + 1}/{max_retries}), retrying in {delay}s: {e}")
+            await asyncio.sleep(delay)
