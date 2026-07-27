@@ -5,7 +5,7 @@ services:
     runtime: docker
     repo: https://github.com/adrianestebanrodriguez/foodtalent
     region: ohio
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: backend/Dockerfile
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -32,7 +32,7 @@ services:
     runtime: docker
     repo: https://github.com/adrianestebanrodriguez/foodtalent
     region: ohio
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: backend/Dockerfile
     command: celery -A app.tasks.celery_app worker -l info -Q profile_processing,search_processing,youtube_ingestion,web_ingestion
     envVars:
       - key: DATABASE_URL
