@@ -12,15 +12,23 @@ settings = get_settings()
 
 # Ensure SSL for Render PostgreSQL (asyncpg uses 'ssl' parameter, not 'sslmode')
 database_url = settings.DATABASE_URL
-# Remove any existing sslmode (Render provides sslmode=require)
+
+# Log the original URL for debugging
+logging.info(f"Original DATABASE_URL: {database_url[:100]}...")
+
+# Remove any existing sslmode parameter (Render provides sslmode=require)
 if "sslmode=" in database_url:
     import re
     database_url = re.sub(r"[?&]sslmode=[^&]*", "", database_url)
-    database_url = database_url.replace("?", "?").replace("&&", "&")
-# Ensure ssl=true for asyncpg
+    # Clean up double ? or &&
+    database_url = database_url.replace("??", "?").replace("?&", "?").replace("&&", "&")
+
+# Ensure ssl=true for asyncpg (asyncpg uses 'ssl' parameter, not 'sslmode')
 if "ssl=" not in database_url:
     separator = "&" if "?" in database_url else "?"
     database_url = f"{database_url}{separator}ssl=true"
+
+logging.info(f"Processed DATABASE_URL: {database_url[:100]}...")
 
 engine = create_async_engine(database_url, echo=settings.DEBUG)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
