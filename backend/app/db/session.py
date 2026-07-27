@@ -12,6 +12,12 @@ settings = get_settings()
 
 # Ensure SSL for Render PostgreSQL (asyncpg uses 'ssl' parameter, not 'sslmode')
 database_url = settings.DATABASE_URL
+# Remove any existing sslmode (Render provides sslmode=require)
+if "sslmode=" in database_url:
+    import re
+    database_url = re.sub(r"[?&]sslmode=[^&]*", "", database_url)
+    database_url = database_url.replace("?", "?").replace("&&", "&")
+# Ensure ssl=true for asyncpg
 if "ssl=" not in database_url:
     separator = "&" if "?" in database_url else "?"
     database_url = f"{database_url}{separator}ssl=true"
