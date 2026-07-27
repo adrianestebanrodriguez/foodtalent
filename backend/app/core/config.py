@@ -29,7 +29,10 @@ class Settings(BaseSettings):
     GOOGLE_CSE_ID: str = ""
 
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173", "https://foodtalent-five.vercel.app"]
+
+    # Frontend URL for password reset links
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # Security
     RATE_LIMIT_GLOBAL: str = "60/minute"

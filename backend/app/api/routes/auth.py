@@ -105,7 +105,7 @@ async def forgot_password(
     user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
     await db.commit()
 
-    reset_link = f"http://localhost:3000/reset-password?token={token}"
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
     # Try to send email if SMTP is configured
     if settings.SMTP_HOST:
