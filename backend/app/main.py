@@ -31,9 +31,23 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Lista explicita de dominios permitidos
+allowed_origins = [
+    "https://foodtalent-five.vercel.app",  # Tu frontend en Vercel
+    "http://localhost:3000",               # Desarrollo local
+    "http://127.0.0.1:3000",
+]
+
+# Si settings.CORS_ORIGINS tiene datos extra, se combinan
+if hasattr(settings, "CORS_ORIGINS") and settings.CORS_ORIGINS:
+    if isinstance(settings.CORS_ORIGINS, list):
+        allowed_origins.extend(settings.CORS_ORIGINS)
+    elif isinstance(settings.CORS_ORIGINS, str):
+        allowed_origins.extend([origin.strip() for origin in settings.CORS_ORIGINS.split(",")])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
