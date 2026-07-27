@@ -6,6 +6,14 @@ const nextConfig = {
       { protocol: "https", hostname: "i.pravatar.cc" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://foodtalent.onrender.com/api/:path*",
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
