@@ -1,17 +1,24 @@
+import asyncio
 from datetime import datetime
+import logging
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, Float, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from pgvector.sqlalchemy import Vector
 from app.core.config import get_settings
-import asyncio
-import logging
 
 settings = get_settings()
 
-# Clean DATABASE_URL - remove sslmode, let asyncpg handle SSL via connect_args
 database_url = settings.DATABASE_URL
+
+# --- FIX: Forzar el dialecto asyncpg para evitar ModuleNotFoundError: No module named 'psycopg2' ---
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+asyncpg://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Clean DATABASE_URL - remove sslmode, let asyncpg handle SSL via connect_args
 if "sslmode=" in database_url:
     import re
     database_url = re.sub(r"[?&]sslmode=[^&]*", "", database_url)
