@@ -10,11 +10,11 @@ import logging
 
 settings = get_settings()
 
-# Ensure SSL mode for Render PostgreSQL
+# Ensure SSL for Render PostgreSQL (asyncpg uses 'ssl' parameter, not 'sslmode')
 database_url = settings.DATABASE_URL
-if "sslmode" not in database_url:
+if "ssl=" not in database_url:
     separator = "&" if "?" in database_url else "?"
-    database_url = f"{database_url}{separator}sslmode=require"
+    database_url = f"{database_url}{separator}ssl=true"
 
 engine = create_async_engine(database_url, echo=settings.DEBUG)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
