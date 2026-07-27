@@ -1,4 +1,18 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Sanitizar la URL base para corregir faltas de slashes (ej. https:/) o barras al final
+function getSanitizedApiUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || "https://foodtalent.onrender.com";
+  
+  let cleaned = envUrl.trim();
+  // Corregir si viene como https:/ en vez de https://
+  cleaned = cleaned.replace(/^https?:\/(?!\/)/, (match) => match + "/");
+  // Eliminar barra diagonal al final si existe
+  if (cleaned.endsWith("/")) {
+    cleaned = cleaned.slice(0, -1);
+  }
+  return cleaned;
+}
+
+const API_URL = getSanitizedApiUrl();
 
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -19,7 +33,9 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const formattedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+  const response = await fetch(`${API_URL}${formattedEndpoint}`, {
     ...options,
     headers,
   });
