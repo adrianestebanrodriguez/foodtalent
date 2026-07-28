@@ -1,4 +1,7 @@
+import json
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response as FastAPIResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import pathlib
@@ -187,3 +190,54 @@ async def get_professional_markdown(
         raise HTTPException(status_code=404, detail="Markdown no disponible")
 
     return {"markdown": professional.markdown_content}
+
+
+@router.get("/export/json")
+async def export_professionals_json(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Solo administradores pueden exportar datos")
+
+    result = await db.execute(select(Professional).order_by(Professional.id))
+    professionals = result.scalars().all()
+
+    data = []
+    for p in professionals:
+        data.append(
+            {
+                "id": p.id,
+                "user_id": p.user_id,
+                "name": p.name,
+                "email": p.email,
+                "avatar_url": p.avatar_url,
+                "whatsapp": p.whatsapp,
+                "specialties": p.specialties,
+                "experience_years": p.experience_years,
+                "availability": p.availability,
+                "hourly_rate": p.hourly_rate,
+                "location": p.location,
+                "research_products": p.research_products,
+                "last_experience": p.last_experience,
+                "summary": p.summary,
+                "markdown_content": p.markdown_content,
+                "source": p.source,
+                "sources": p.sources,
+                "is_verified": p.is_verified,
+                "rating": p.rating,
+                "projects_completed": p.projects_completed,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+            }
+        )
+
+    json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+
+    return FastAPIResponse(
+        content=json_bytes,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="foodtalent_professionals_backup_{datetime.utcnow().strftime("%Y%m%d")}.json"',
+        },
+    )

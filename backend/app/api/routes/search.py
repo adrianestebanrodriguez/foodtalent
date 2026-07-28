@@ -1,13 +1,18 @@
 import asyncio
-from fastapi import APIRouter, Depends
+from datetime import datetime
+import httpx
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.db.session import get_db, Professional
+from app.db.session import get_db, Professional, SearchLog
 from app.models.schemas import SearchRequest, MatchResult
 from app.services.gemini_service import GeminiService
 from app.services.vector_store import VectorStore
 from app.services.youtube_service import YouTubeService
 from app.services.food_industry_scraper import FoodIndustryScraper
+from app.core.config import get_settings
+
+settings = get_settings()
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -80,6 +85,7 @@ async def _search_web(scraper: FoodIndustryScraper, query: str) -> list[dict]:
 @router.post("", response_model=list[MatchResult])
 async def search_professionals(
     request: SearchRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     print(f"[Search] Nueva busqueda: '{request.query}'", flush=True)
@@ -146,7 +152,7 @@ async def search_professionals(
 
     await web_scraper.close()
 
-    return [
+    match_results = [
         MatchResult(
             professional_id=r["professional_id"],
             name=r["name"],
@@ -165,3 +171,51 @@ async def search_professionals(
         )
         for r in results
     ]
+
+    try:
+        top = results[0] if results else None
+        log_entry = SearchLog(
+            query=request.query,
+            results_count=len(results),
+            top_match_name=top["name"] if top else None,
+            top_match_percentage=top["match_percentage"] if top else None,
+            ip_address=http_request.client.host if http_request.client else None,
+            user_agent=http_request.headers.get("user-agent"),
+        )
+        db.add(log_entry)
+        await db.commit()
+    except Exception as e:
+        print(f"[Search] Error logging search: {e}", flush=True)
+
+    try:
+        top_match_text = (
+            f"{top['name']} ({top['match_percentage']}%)" if top else "Sin resultados"
+        )
+        if settings.BREVO_API_KEY:
+            subject = f"Nueva busqueda en FoodTalent: {request.query[:80]}"
+            text_body = (
+                f"Alguien busco en FoodTalent:\n\n"
+                f"Query: {request.query}\n"
+                f"Resultados: {len(results)}\n"
+                f"Top match: {top_match_text}\n\n"
+                f"IP: {http_request.client.host if http_request.client else 'N/A'}\n"
+                f"Fecha: {datetime.utcnow()}"
+            )
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={
+                        "api-key": settings.BREVO_API_KEY,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "sender": {"email": settings.BREVO_FROM_EMAIL, "name": settings.BREVO_FROM_NAME},
+                        "to": [{"email": settings.BREVO_FROM_EMAIL}],
+                        "subject": subject,
+                        "textContent": text_body,
+                    },
+                )
+    except Exception as e:
+        print(f"[Search] Error sending notification: {e}", flush=True)
+
+    return match_results

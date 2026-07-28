@@ -111,6 +111,19 @@ class Professional(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class SearchLog(Base):
+    __tablename__ = "search_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    results_count: Mapped[int] = mapped_column(Integer, default=0)
+    top_match_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    top_match_percentage: Mapped[float] = mapped_column(Float, nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 async def init_db():
     max_retries = 10
     base_delay = 2
