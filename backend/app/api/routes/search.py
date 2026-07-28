@@ -1,5 +1,7 @@
 import asyncio
+import smtplib
 from datetime import datetime
+from email.mime.text import MIMEText
 import httpx
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -191,16 +193,16 @@ async def search_professionals(
         top_match_text = (
             f"{top['name']} ({top['match_percentage']}%)" if top else "Sin resultados"
         )
+        subject = f"Nueva busqueda en FoodTalent: {request.query[:80]}"
+        text_body = (
+            f"Alguien busco en FoodTalent:\n\n"
+            f"Query: {request.query}\n"
+            f"Resultados: {len(results)}\n"
+            f"Top match: {top_match_text}\n\n"
+            f"IP: {http_request.client.host if http_request.client else 'N/A'}\n"
+            f"Fecha: {datetime.utcnow()}"
+        )
         if settings.BREVO_API_KEY:
-            subject = f"Nueva busqueda en FoodTalent: {request.query[:80]}"
-            text_body = (
-                f"Alguien busco en FoodTalent:\n\n"
-                f"Query: {request.query}\n"
-                f"Resultados: {len(results)}\n"
-                f"Top match: {top_match_text}\n\n"
-                f"IP: {http_request.client.host if http_request.client else 'N/A'}\n"
-                f"Fecha: {datetime.utcnow()}"
-            )
             async with httpx.AsyncClient(timeout=10) as client:
                 await client.post(
                     "https://api.brevo.com/v3/smtp/email",
@@ -215,6 +217,15 @@ async def search_professionals(
                         "textContent": text_body,
                     },
                 )
+        elif settings.SMTP_HOST and settings.SMTP_PASSWORD:
+            msg = MIMEText(text_body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = settings.SMTP_FROM_EMAIL
+            msg["To"] = settings.BREVO_FROM_EMAIL
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.starttls()
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.send_message(msg)
     except Exception as e:
         print(f"[Search] Error sending notification: {e}", flush=True)
 
