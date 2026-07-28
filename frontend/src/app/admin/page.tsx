@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/api";
-import { ChefHat, Download, ArrowLeft, Shield } from "lucide-react";
+import { Download, ArrowLeft, Shield, Search } from "lucide-react";
 
 export default function AdminPage() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingLogs, setExportingLogs] = useState(false);
 
   useEffect(() => {
     const t = getAuthToken();
@@ -22,11 +23,11 @@ export default function AdminPage() {
     }
   }, []);
 
-  const handleExport = async () => {
+  const downloadFile = async (url: string, filename: string, setLoading: (v: boolean) => void) => {
     if (!token) return;
-    setExporting(true);
+    setLoading(true);
     try {
-      const resp = await fetch("/api/professionals/export/json", {
+      const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resp.ok) {
@@ -35,18 +36,31 @@ export default function AdminPage() {
         return;
       }
       const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `foodtalent_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(a.href);
     } catch {
       alert("Error al descargar el archivo");
     } finally {
-      setExporting(false);
+      setLoading(false);
     }
   };
+
+  const handleExportProfessionals = () =>
+    downloadFile(
+      "/api/professionals/export/json",
+      `foodtalent_professionals_${new Date().toISOString().slice(0, 10)}.json`,
+      setExporting
+    );
+
+  const handleExportSearchLogs = () =>
+    downloadFile(
+      "/api/search/export/json",
+      `foodtalent_search_logs_${new Date().toISOString().slice(0, 10)}.json`,
+      setExportingLogs
+    );
 
   if (!token) {
     return (
@@ -73,21 +87,44 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8">
+        {/* Export professionals */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <Download className="w-5 h-5 text-emerald-400" />
             <h2 className="text-lg font-semibold text-white">Exportar profesionales</h2>
           </div>
           <p className="text-sm text-slate-400 mb-6">
-            Descarga un archivo JSON con todos los profesionales registrados en la plataforma. Útil como respaldo en caso de caída de la base de datos.
+            Descarga un archivo JSON con todos los profesionales registrados en la plataforma.
           </p>
           <button
-            onClick={handleExport}
+            onClick={handleExportProfessionals}
             disabled={exporting || !isSuperuser}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
             {exporting ? "Exportando..." : "Descargar backup JSON"}
+          </button>
+          {!isSuperuser && (
+            <p className="text-xs text-amber-400 mt-3">Solo administradores pueden exportar datos.</p>
+          )}
+        </div>
+
+        {/* Export search logs */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Search className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-lg font-semibold text-white">Exportar historial de búsquedas</h2>
+          </div>
+          <p className="text-sm text-slate-400 mb-6">
+            Descarga un archivo JSON con todas las búsquedas realizadas en la plataforma, incluyendo el desafío, fecha, hora y resultados.
+          </p>
+          <button
+            onClick={handleExportSearchLogs}
+            disabled={exportingLogs || !isSuperuser}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Search className="w-4 h-4" />
+            {exportingLogs ? "Exportando..." : "Descargar historial JSON"}
           </button>
           {!isSuperuser && (
             <p className="text-xs text-amber-400 mt-3">Solo administradores pueden exportar datos.</p>

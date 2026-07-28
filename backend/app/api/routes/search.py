@@ -1,18 +1,21 @@
 import asyncio
+import json
 import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
 import httpx
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response as FastAPIResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.db.session import get_db, Professional, SearchLog
+from app.db.session import get_db, Professional, SearchLog, User
 from app.models.schemas import SearchRequest, MatchResult
 from app.services.gemini_service import GeminiService
 from app.services.vector_store import VectorStore
 from app.services.youtube_service import YouTubeService
 from app.services.food_industry_scraper import FoodIndustryScraper
 from app.core.config import get_settings
+from app.api.deps import get_current_user
 
 settings = get_settings()
 
@@ -82,6 +85,41 @@ async def _search_web(scraper: FoodIndustryScraper, query: str) -> list[dict]:
     except Exception as e:
         print(f"[Web] Error: {e}", flush=True)
         return []
+
+
+@router.get("/export/json")
+async def export_search_logs(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Solo administradores pueden exportar datos")
+
+    result = await db.execute(select(SearchLog).order_by(SearchLog.created_at.desc()).limit(5000))
+    logs = result.scalars().all()
+
+    data = []
+    for log in logs:
+        data.append({
+            "id": log.id,
+            "query": log.query,
+            "results_count": log.results_count,
+            "top_match_name": log.top_match_name,
+            "top_match_percentage": log.top_match_percentage,
+            "ip_address": log.ip_address,
+            "user_agent": log.user_agent,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        })
+
+    json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+
+    return FastAPIResponse(
+        content=json_bytes,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="foodtalent_search_logs_{datetime.utcnow().strftime("%Y%m%d")}.json"',
+        },
+    )
 
 
 @router.post("", response_model=list[MatchResult])
