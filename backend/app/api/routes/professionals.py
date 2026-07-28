@@ -5,6 +5,7 @@ import pathlib
 from app.db.session import Professional, get_db
 from app.models.schemas import ProfessionalCreate, ProfessionalResponse
 from app.services.markdown_converter import MarkdownConverter
+from app.services.gemini_service import GeminiService
 from app.api.deps import require_role, get_current_user
 from app.db.session import User
 from app.core.config import get_settings
@@ -60,7 +61,19 @@ async def create_professional(
     await db.commit()
     await db.refresh(professional)
 
-    convert_profile_task.delay(profile_data)
+    try:
+        gemini = GeminiService()
+        embedding = await gemini.generate_profile_embedding(professional.markdown_content)
+        if embedding:
+            professional.embedding = embedding
+            await db.commit()
+    except Exception as e:
+        print(f"Error generating embedding: {e}")
+
+    try:
+        convert_profile_task.delay(profile_data)
+    except Exception as e:
+        print(f"Error queuing Celery task: {e}")
 
     return professional
 
@@ -102,7 +115,19 @@ async def update_professional(
     await db.commit()
     await db.refresh(professional)
 
-    convert_profile_task.delay(profile_data)
+    try:
+        gemini = GeminiService()
+        embedding = await gemini.generate_profile_embedding(professional.markdown_content)
+        if embedding:
+            professional.embedding = embedding
+            await db.commit()
+    except Exception as e:
+        print(f"Error generating embedding: {e}")
+
+    try:
+        convert_profile_task.delay(profile_data)
+    except Exception as e:
+        print(f"Error queuing Celery task: {e}")
 
     return professional
 
