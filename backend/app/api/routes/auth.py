@@ -1,5 +1,6 @@
 import secrets
 import bcrypt
+import httpx
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -107,19 +108,45 @@ async def forgot_password(
 
     reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
-    # Try to send email if SMTP is configured
+    subject = "Recuperacion de contrasena - FoodTalent"
+    text_body = (
+        f"Has solicitado restablecer tu contrasena en FoodTalent.\n\n"
+        f"Haz clic en el siguiente enlace para crear una nueva contrasena:\n{reset_link}\n\n"
+        f"Este enlace expira en 1 hora.\n\n"
+        f"Si no solicitaste este cambio, ignora este mensaje."
+    )
+
+    # Try Brevo REST API first
+    if settings.BREVO_API_KEY:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={
+                        "api-key": settings.BREVO_API_KEY,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "sender": {"email": settings.BREVO_FROM_EMAIL, "name": settings.BREVO_FROM_NAME},
+                        "to": [{"email": email}],
+                        "subject": subject,
+                        "textContent": text_body,
+                    },
+                )
+                if resp.status_code < 400:
+                    return {"message": "Correo enviado con instrucciones para restablecer tu contraseña."}
+                print(f"Brevo API error: {resp.status_code} {resp.text}")
+        except Exception as e:
+            print(f"Brevo API exception: {e}")
+
+    # Fallback SMTP
     if settings.SMTP_HOST:
         try:
             import smtplib
             from email.mime.text import MIMEText
 
-            msg = MIMEText(
-                f"Has solicitado restablecer tu contrasena en FoodTalent.\n\n"
-                f"Haz clic en el siguiente enlace para crear una nueva contrasena:\n{reset_link}\n\n"
-                f"Este enlace expira en 1 hora.\n\n"
-                f"Si no solicitaste este cambio, ignora este mensaje."
-            )
-            msg["Subject"] = "Recuperacion de contrasena - FoodTalent"
+            msg = MIMEText(text_body)
+            msg["Subject"] = subject
             msg["From"] = settings.SMTP_FROM_EMAIL
             msg["To"] = email
 
@@ -131,7 +158,7 @@ async def forgot_password(
         except Exception as e:
             print(f"Error sending email: {e}")
 
-    # Fallback when SMTP is not configured (or fails)
+    # Fallback when no email method works
     return {
         "message": "Enlace de recuperación generado.",
         "reset_link": reset_link,

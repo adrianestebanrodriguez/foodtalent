@@ -39,7 +39,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH: str = "10/minute"
     CSP_DIRECTIVES: dict | None = None
 
-    # SMTP (for password reset)
+    # Brevo API (for password reset emails)
+    BREVO_API_KEY: str = ""
+    BREVO_FROM_EMAIL: str = "alquimiafoods@proton.me"
+    BREVO_FROM_NAME: str = "FoodTalent"
+
+    # SMTP (for password reset) - fallback if Brevo API not configured
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
