@@ -240,22 +240,28 @@ async def search_professionals(
             f"IP: {http_request.client.host if http_request.client else 'N/A'}\n"
             f"Fecha: {datetime.utcnow()}"
         )
+        emailed = False
         if settings.BREVO_API_KEY:
-            async with httpx.AsyncClient(timeout=10) as client:
-                await client.post(
-                    "https://api.brevo.com/v3/smtp/email",
-                    headers={
-                        "api-key": settings.BREVO_API_KEY,
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "sender": {"email": settings.BREVO_FROM_EMAIL, "name": settings.BREVO_FROM_NAME},
-                        "to": [{"email": settings.BREVO_FROM_EMAIL}],
-                        "subject": subject,
-                        "textContent": text_body,
-                    },
-                )
-        elif settings.SMTP_HOST and settings.SMTP_PASSWORD:
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.post(
+                        "https://api.brevo.com/v3/smtp/email",
+                        headers={
+                            "api-key": settings.BREVO_API_KEY,
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "sender": {"email": settings.BREVO_FROM_EMAIL, "name": settings.BREVO_FROM_NAME},
+                            "to": [{"email": settings.BREVO_FROM_EMAIL}],
+                            "subject": subject,
+                            "textContent": text_body,
+                        },
+                    )
+                    if resp.status_code < 400:
+                        emailed = True
+            except Exception as e:
+                print(f"[Search] Brevo API error: {e}", flush=True)
+        if not emailed and settings.SMTP_HOST and settings.SMTP_PASSWORD:
             msg = MIMEText(text_body, "plain", "utf-8")
             msg["Subject"] = subject
             msg["From"] = settings.SMTP_FROM_EMAIL
