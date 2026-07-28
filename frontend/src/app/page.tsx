@@ -23,6 +23,7 @@ export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [professionalId, setProfessionalId] = useState<number | null>(null);
+  const [isSuperuser, setIsSuperuser] = useState(false);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -32,6 +33,7 @@ export default function HomePage() {
         const payload = JSON.parse(atob(token.split(".")[1]));
         const uid = parseInt(payload.sub);
         setUserId(uid);
+        setIsSuperuser(payload.is_superuser === true);
         getMyProfessionalProfile()
           .then((prof) => setProfessionalId(prof.id))
           .catch(() => {});
@@ -78,6 +80,11 @@ export default function HomePage() {
             <div className="flex items-center gap-3">
               {loggedIn ? (
                 <>
+                  {isSuperuser && (
+                    <a href="/admin" className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors">
+                      Admin
+                    </a>
+                  )}
                   <a href={`/profile/${professionalId}/edit`} className="flex items-center gap-1.5 text-slate-300 hover:text-white text-sm font-medium transition-colors">
                     <User className="w-4 h-4" />
                     Mi perfil
@@ -88,6 +95,7 @@ export default function HomePage() {
                       localStorage.removeItem("foodtalent_role");
                       setLoggedIn(false);
                       setUserId(null);
+                      setIsSuperuser(false);
                     }}
                     className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
                   >
