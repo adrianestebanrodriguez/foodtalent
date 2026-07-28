@@ -26,7 +26,7 @@ services:
       - key: BREVO_API_KEY
         sync: false
       - key: BREVO_FROM_EMAIL
-        value: alquimiafoods@proton.me
+        value: adrianalvarezr@gmail.com
       - key: BREVO_FROM_NAME
         value: FoodTalent
       - key: SMTP_HOST
@@ -38,7 +38,7 @@ services:
       - key: SMTP_PASSWORD
         sync: false
       - key: SMTP_FROM_EMAIL
-        value: alquimiafoods@proton.me
+        value: adrianalvarezr@gmail.com
       - key: CORS_ORIGINS
         value: '["https://foodtalent-frontend.onrender.com"]'
 
