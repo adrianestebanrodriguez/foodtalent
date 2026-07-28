@@ -252,7 +252,7 @@ async def search_professionals(
                         },
                         json={
                             "sender": {"email": settings.BREVO_FROM_EMAIL, "name": settings.BREVO_FROM_NAME},
-                            "to": [{"email": settings.BREVO_FROM_EMAIL}],
+                            "to": [{"email": settings.NOTIFICATION_EMAIL}],
                             "subject": subject,
                             "textContent": text_body,
                         },
@@ -265,7 +265,7 @@ async def search_professionals(
             msg = MIMEText(text_body, "plain", "utf-8")
             msg["Subject"] = subject
             msg["From"] = settings.SMTP_FROM_EMAIL
-            msg["To"] = settings.BREVO_FROM_EMAIL
+            msg["To"] = settings.NOTIFICATION_EMAIL
             with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)

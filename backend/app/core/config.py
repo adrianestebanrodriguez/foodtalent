@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str = ""
     BREVO_FROM_EMAIL: str = "alquimiafoods@proton.me"
     BREVO_FROM_NAME: str = "FoodTalent"
+    NOTIFICATION_EMAIL: str = "alquimiafoods@proton.me"
 
     # SMTP (for password reset) - fallback if Brevo API not configured
     SMTP_HOST: str = ""

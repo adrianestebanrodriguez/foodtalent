@@ -29,6 +29,8 @@ services:
         value: adrianalvarezr@gmail.com
       - key: BREVO_FROM_NAME
         value: FoodTalent
+      - key: NOTIFICATION_EMAIL
+        value: alquimiafoods@proton.me
       - key: SMTP_HOST
         value: smtp-relay.brevo.com
       - key: SMTP_PORT
