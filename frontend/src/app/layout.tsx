@@ -5,13 +5,18 @@ import Script from "next/script";
 
 const siteUrl = "https://foodtalent-five.vercel.app";
 
+function extractGaId(raw: string): string {
+  const match = raw.match(/[GA|G]-[A-Z0-9]+/);
+  return match ? match[0] : "";
+}
+
 export const metadata: Metadata = {
   title: {
-    default: "FoodTalent - Expertos en industria alimentaria | Consultores IA",
+    default: "FoodTalent | Encuentra expertos en alimentos en Latam (HACCP, calidad, I+D)",
     template: "%s | FoodTalent",
   },
   description:
-    "Plataforma de matching impulsada por IA que conecta empresarios con profesionales expertos en formulación, procesos, calidad, I+D y más. Encuentra al consultor ideal para tu reto alimentario.",
+    "Conecta con ingenieros de alimentos y consultores especializados en HACCP, inocuidad, formulación, calidad e I+D en Latinoamérica. Matching por IA: describe tu reto de planta y te conectamos con el profesional correcto en minutos.",
   keywords: [
     "consultor industria alimentaria",
     "experto en formulación de alimentos",
@@ -33,16 +38,16 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
     languages: {
-      "es-CO": "/",
+      "es-419": "/",
     },
   },
   openGraph: {
     type: "website",
-    locale: "es_CO",
+    locale: "es_419",
     siteName: "FoodTalent",
-    title: "FoodTalent - Expertos en industria alimentaria | Consultores IA",
+    title: "FoodTalent | Encuentra expertos en alimentos en Latam (HACCP, calidad, I+D)",
     description:
-      "Encuentra al experto que resuelva tu reto en industria de alimentos. Matching impulsado por IA.",
+      "Conecta con ingenieros de alimentos y consultores en HACCP, inocuidad, formulación, calidad e I+D en Latinoamérica. Matching por IA.",
     url: siteUrl,
     images: [
       {
@@ -55,9 +60,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "FoodTalent - Expertos en industria alimentaria",
+    title: "FoodTalent | Encuentra expertos en alimentos en Latam",
     description:
-      "Plataforma de matching IA para conectar empresas de alimentos con expertos.",
+      "Conecta con ingenieros de alimentos y consultores en HACCP, inocuidad, formulación, calidad e I+D en Latinoamérica.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -83,13 +88,15 @@ const jsonLd = {
       url: siteUrl,
       logo: `${siteUrl}/logo.png`,
       description:
-        "Plataforma de matching impulsada por IA que conecta empresarios con profesionales expertos en la industria de alimentos.",
+        "Plataforma de matching impulsada por IA que conecta empresarios con profesionales expertos en la industria de alimentos en Latinoamérica.",
       contactPoint: {
         "@type": "ContactPoint",
         email: "alquimiafoods@proton.me",
         contactType: "customer service",
       },
-      sameAs: [],
+      sameAs: [
+        "https://www.linkedin.com/company/foodtalent",
+      ],
     },
     {
       "@type": "WebSite",
@@ -98,7 +105,7 @@ const jsonLd = {
       name: "FoodTalent",
       alternateName: "FoodTalent - Expertos en industria alimentaria",
       publisher: { "@id": `${siteUrl}/#organization` },
-      inLanguage: "es-CO",
+      inLanguage: "es-419",
       potentialAction: {
         "@type": "SearchAction",
         target: {
@@ -108,13 +115,6 @@ const jsonLd = {
         "query-input": "required name=search_term_string",
       },
     },
-    {
-      "@type": "BreadcrumbList",
-      "@id": `${siteUrl}/#breadcrumb`,
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Inicio", item: siteUrl },
-      ],
-    },
   ],
 };
 
@@ -123,14 +123,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID || "";
+  const gaId = extractGaId(process.env.NEXT_PUBLIC_GA_ID || "");
 
   return (
     <html lang="es">
       <head>
-        <link rel="canonical" href={siteUrl} />
-        <meta name="geo.country" content="CO" />
-        <meta name="geo.region" content="CO" />
         <meta name="theme-color" content="#020617" />
       </head>
       <body>
