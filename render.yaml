@@ -23,6 +23,22 @@ services:
         sync: false
       - key: GOOGLE_CSE_ID
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_FROM_EMAIL
+        value: alquimiafoods@proton.me
+      - key: BREVO_FROM_NAME
+        value: FoodTalent
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        value: alquimiafoods@proton.me
       - key: CORS_ORIGINS
         value: '["https://foodtalent-frontend.onrender.com"]'
 
