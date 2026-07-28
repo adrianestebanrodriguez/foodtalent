@@ -56,7 +56,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
 
-    access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
+    access_token = create_access_token(data={"sub": str(user.id), "role": user.role, "is_superuser": user.is_superuser})
     return TokenResponse(access_token=access_token, role=user.role)
 
 
@@ -82,7 +82,7 @@ async def login(
             detail="Cuenta desactivada",
         )
 
-    access_token = create_access_token(data={"sub": str(user.id), "role": user.role})
+    access_token = create_access_token(data={"sub": str(user.id), "role": user.role, "is_superuser": user.is_superuser})
     return TokenResponse(access_token=access_token)
 
 
