@@ -188,18 +188,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Two audiences */}
-      <section className="max-w-2xl mx-auto px-4 pb-24">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
-          <h2 className="text-xl font-bold text-white mb-3">¿Eres consultor o ingeniero de alimentos?</h2>
-          <p className="text-slate-400 text-sm leading-relaxed mb-5">
-            Crea tu perfil técnico y deja que las empresas te encuentren por tu especialidad, no por tu CV.
-          </p>
-          <a href="/register" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
-            Crear mi perfil
-          </a>
-        </div>
-      </section>
+      {results.length === 0 && (
+        <section className="max-w-2xl mx-auto px-4 pb-24">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
+            <h2 className="text-xl font-bold text-white mb-3">¿Eres consultor o ingeniero de alimentos?</h2>
+            <p className="text-slate-400 text-sm leading-relaxed mb-5">
+              Crea tu perfil técnico y deja que las empresas te encuentren por tu especialidad, no por tu CV.
+            </p>
+            <a href="/register" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
+              Crear mi perfil
+            </a>
+          </div>
+        </section>
+      )}
 
       {/* Error */}
       {error && (
