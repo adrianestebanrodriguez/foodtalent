@@ -189,26 +189,15 @@ export default function HomePage() {
       </section>
 
       {/* Two audiences */}
-      <section className="max-w-5xl mx-auto px-4 pb-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
-            <h2 className="text-xl font-bold text-white mb-3">¿Buscas talento?</h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-5">
-              Describe tu reto arriba y te conectamos con expertos verificados en formulación, HACCP, calidad, I+D y más.
-            </p>
-            <a href="#search-input" className="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 text-sm font-semibold transition-colors">
-              Buscar experto ahora
-            </a>
-          </div>
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
-            <h2 className="text-xl font-bold text-white mb-3">¿Eres consultor o ingeniero de alimentos?</h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-5">
-              Crea tu perfil técnico y deja que las empresas te encuentren por tu especialidad, no por tu CV.
-            </p>
-            <a href="/register" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
-              Crear mi perfil
-            </a>
-          </div>
+      <section className="max-w-2xl mx-auto px-4 pb-24">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
+          <h2 className="text-xl font-bold text-white mb-3">¿Eres consultor o ingeniero de alimentos?</h2>
+          <p className="text-slate-400 text-sm leading-relaxed mb-5">
+            Crea tu perfil técnico y deja que las empresas te encuentren por tu especialidad, no por tu CV.
+          </p>
+          <a href="/register" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
+            Crear mi perfil
+          </a>
         </div>
       </section>
 
