@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # Gemini
+    # Gemini (multiple keys for rotation, comma-separated)
     GEMINI_API_KEY: str = ""
 
     # YouTube

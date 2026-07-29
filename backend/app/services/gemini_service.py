@@ -1,12 +1,41 @@
 import google.generativeai as genai
+from google.api_core import exceptions as google_exceptions
 from app.core.config import get_settings
 import json
 import re
+import random
 
 settings = get_settings()
 
-if settings.GEMINI_API_KEY:
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+
+def _build_key_pool() -> list[str]:
+    raw = settings.GEMINI_API_KEY
+    if not raw:
+        return []
+    keys = [k.strip() for k in raw.replace("\n", ",").split(",") if k.strip()]
+    random.shuffle(keys)
+    return keys
+
+
+KEY_POOL = _build_key_pool()
+_KEY_INDEX = 0
+
+
+def _get_next_key() -> str:
+    global _KEY_INDEX
+    if not KEY_POOL:
+        return ""
+    key = KEY_POOL[_KEY_INDEX % len(KEY_POOL)]
+    _KEY_INDEX += 1
+    return key
+
+
+def _configure_genai(key: str):
+    genai.configure(api_key=key)
+
+
+if KEY_POOL:
+    _configure_genai(KEY_POOL[0])
 
 
 METAPROMPT = """Eres el motor de busqueda de FoodTalent, plataforma que conecta empresas de alimentos con expertos.
@@ -124,36 +153,58 @@ class GeminiService:
         prompt = METAPROMPT.format(max_results=max_results)
         full_prompt = f"{prompt}\n\n## DESAFIO DEL CLIENTE\n\"{query}\"\n\n## CANDIDATOS DISPONIBLES\n\n{context}"
 
-        try:
-            response = await self.model.generate_content_async(
-                full_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.2,
-                    max_output_tokens=2048,
-                ),
-            )
-            return self._parse_response(response.text, candidates)
-        except Exception as e:
-            print(f"[Gemini] Reranking error: {e}", flush=True)
-            return [
-                {
-                    "professional_id": c.get("id"),
-                    "name": c.get("name", "N/A"),
-                    "match_percentage": round(c.get("similarity", 0) * 100),
-                    "nivel_match": self._nivel_match(round(c.get("similarity", 0) * 100)),
-                    "explanation": f"Perfil relevante por experiencia en {', '.join(c.get('specialties', []))}",
-                    "source": c.get("source", "registered"),
-                    "avatar_url": c.get("avatar_url"),
-                    "specialties": c.get("specialties", []),
-                    "experience_years": c.get("experience_years", 0),
-                    "location": c.get("location"),
-                    "video_url": c.get("video_url"),
-                    "article_url": c.get("article_url"),
-                    "channel_name": c.get("channel_name"),
-                    "site_name": c.get("site_name"),
-                }
-                for c in sorted(candidates, key=lambda x: x.get("similarity", 0), reverse=True)[:max_results]
-            ]
+        max_retries = max(len(KEY_POOL), 1)
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0 and KEY_POOL:
+                    new_key = _get_next_key()
+                    _configure_genai(new_key)
+                    self.model = genai.GenerativeModel("models/gemini-2.0-flash")
+                    print(f"[Gemini] Retry {attempt + 1} with rotated key", flush=True)
+
+                response = await self.model.generate_content_async(
+                    full_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.2,
+                        max_output_tokens=2048,
+                    ),
+                )
+                return self._parse_response(response.text, candidates)
+            except google_exceptions.ResourceExhausted as e:
+                last_error = e
+                print(f"[Gemini] Quota exceeded (attempt {attempt + 1}): {e}", flush=True)
+                if attempt < max_retries - 1:
+                    import asyncio
+                    await asyncio.sleep(2)
+                    continue
+            except Exception as e:
+                print(f"[Gemini] Reranking error: {e}", flush=True)
+                if attempt < max_retries - 1 and KEY_POOL:
+                    continue
+                break
+
+        print(f"[Gemini] All {max_retries} keys exhausted, falling back to similarity sort", flush=True)
+        return [
+            {
+                "professional_id": c.get("id"),
+                "name": c.get("name", "N/A"),
+                "match_percentage": round(c.get("similarity", 0) * 100),
+                "nivel_match": self._nivel_match(round(c.get("similarity", 0) * 100)),
+                "explanation": f"Perfil relevante por experiencia en {', '.join(c.get('specialties', []))}",
+                "source": c.get("source", "registered"),
+                "avatar_url": c.get("avatar_url"),
+                "specialties": c.get("specialties", []),
+                "experience_years": c.get("experience_years", 0),
+                "location": c.get("location"),
+                "video_url": c.get("video_url"),
+                "article_url": c.get("article_url"),
+                "channel_name": c.get("channel_name"),
+                "site_name": c.get("site_name"),
+            }
+            for c in sorted(candidates, key=lambda x: x.get("similarity", 0), reverse=True)[:max_results]
+        ]
 
     async def identify_experts_from_content(self, content: str) -> list[dict]:
         prompt = f"""Analiza el siguiente contenido sobre la industria de alimentos e identifica profesionales o expertos mencionados.
