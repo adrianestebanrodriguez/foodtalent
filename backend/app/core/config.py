@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Tasks: when True, background tasks run inline in the request process
+    # instead of being queued in Celery. Required on Vercel (no workers).
+    TASKS_INLINE: bool = False
+
     # Gemini (multiple keys for rotation, comma-separated)
     GEMINI_API_KEY: str = ""
 

@@ -13,6 +13,7 @@ from app.api.deps import require_role, get_current_user
 from app.db.session import User
 from app.core.config import get_settings
 from app.tasks.convert_profile import convert_profile as convert_profile_task
+from app.tasks.inline import dispatch as dispatch_task
 
 router = APIRouter(prefix="/api/professionals", tags=["professionals"])
 
@@ -74,9 +75,9 @@ async def create_professional(
         print(f"Error generating embedding: {e}")
 
     try:
-        convert_profile_task.delay(profile_data)
+        await dispatch_task(convert_profile_task, profile_data)
     except Exception as e:
-        print(f"Error queuing Celery task: {e}")
+        print(f"Error dispatching convert-profile task: {e}")
 
     return professional
 
@@ -128,9 +129,9 @@ async def update_professional(
         print(f"Error generating embedding: {e}")
 
     try:
-        convert_profile_task.delay(profile_data)
+        await dispatch_task(convert_profile_task, profile_data)
     except Exception as e:
-        print(f"Error queuing Celery task: {e}")
+        print(f"Error dispatching convert-profile task: {e}")
 
     return professional
 

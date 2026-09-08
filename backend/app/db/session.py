@@ -30,14 +30,32 @@ if "ssl=" in database_url:
     database_url = re.sub(r"[?&]ssl=[^&]*", "", database_url)
     database_url = database_url.replace("??", "?").replace("?&", "?").replace("&&", "&")
 
+# Remove pgbouncer= parameter (Supabase pooler URLs include ?pgbouncer=true,
+# which asyncpg does not accept as a connect kwarg)
+if "pgbouncer=" in database_url:
+    import re
+    database_url = re.sub(r"[?&]pgbouncer=[^&]*", "", database_url)
+    database_url = database_url.replace("??", "?").replace("?&", "?").replace("&&", "&")
+    database_url = database_url.rstrip("?&")
+
 # Log for debugging
 logging.info(f"Processed DATABASE_URL: {database_url[:100]}...")
 
 # Use connect_args to explicitly control SSL (bypasses connection string parsing)
+# Local containers (db/localhost) don't support SSL; managed DBs (Supabase/Render/etc) require it.
+_needs_ssl = not any(h in database_url for h in ["@db", "@localhost", "@127.0.0.1", "foodtalent_db"])
+# Supabase Transaction Pooler (pgbouncer, port 6543) does not support prepared
+# statements: asyncpg must disable its statement cache or queries fail.
+_is_pooler = ":6543/" in database_url or "pooler.supabase.com" in database_url
+_connect_args: dict = {"ssl": "require"} if _needs_ssl else {"ssl": False}
+if _is_pooler:
+    _connect_args["statement_cache_size"] = 0
 engine = create_async_engine(
     database_url,
     echo=settings.DEBUG,
-    connect_args={"ssl": "require"}
+    connect_args=_connect_args,
+    pool_size=5,
+    max_overflow=5,
 )
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -131,7 +149,12 @@ async def init_db():
     for attempt in range(max_retries):
         try:
             async with engine.begin() as conn:
-                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                try:
+                    # On Supabase enable `vector` via Dashboard → Database → Extensions.
+                    # Kept here for local/dev databases; failures must not block startup.
+                    await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                except Exception as ext_err:
+                    logging.warning(f"Could not ensure 'vector' extension: {ext_err}")
                 await conn.run_sync(Base.metadata.create_all)
             logging.info("Database initialized successfully")
             return
