@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import Script from "next/script";
 
 const siteUrl = "https://foodtalent-five.vercel.app";
@@ -141,8 +143,12 @@ export default function RootLayout({
         >
           Saltar al contenido principal
         </a>
-        <NavBar />
-        <main id="contenido-principal">{children}</main>
+        <ConvexAuthNextjsServerProvider>
+          <ConvexClientProvider>
+            <NavBar />
+            <main id="contenido-principal">{children}</main>
+          </ConvexClientProvider>
+        </ConvexAuthNextjsServerProvider>
         <footer className="border-t border-slate-800 bg-slate-950 py-6 px-4">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
             <span>&copy; {new Date().getFullYear()} FoodTalent / Alquimia Foods</span>

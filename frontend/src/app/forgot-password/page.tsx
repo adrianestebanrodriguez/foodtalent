@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { Loader2, ChefHat, ArrowLeft, Mail } from "lucide-react";
 
 export default function ForgotPasswordPage() {
+  const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
-
-  const [resetLink, setResetLink] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,16 +17,10 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      const res = await apiRequest("/api/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      if (res.reset_link) {
-        setResetLink(res.reset_link);
-      }
+      await signIn("password", { email, flow: "reset" });
       setSent(true);
     } catch (err: any) {
-      setError(err.message || "Error al enviar la solicitud");
+      setError("No pudimos enviar el codigo. Verifica el email e intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -50,25 +43,17 @@ export default function ForgotPasswordPage() {
             <div className="w-14 h-14 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto">
               <Mail className="w-7 h-7 text-emerald-400" />
             </div>
-            
-            {resetLink ? (
-              <>
-                <h1 className="text-xl font-bold text-white">Enlace de recuperación listo</h1>
-                <p className="text-slate-400 text-sm">
-                  Dado que el servicio de correo no está configurado (modo de desarrollo), puedes hacer clic directamente en el siguiente botón para restablecer tu contraseña:
-                </p>
-                <a href={resetLink} className="inline-flex items-center justify-center w-full py-3 px-4 rounded-xl font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors text-sm">
-                  Restablecer Contraseña Ahora
-                </a>
-              </>
-            ) : (
-              <>
-                <h1 className="text-xl font-bold text-white">Revisa tu email</h1>
-                <p className="text-slate-400 text-sm">
-                  Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.
-                </p>
-              </>
-            )}
+            <h1 className="text-xl font-bold text-white">Revisa tu email</h1>
+            <p className="text-slate-400 text-sm">
+              Te enviamos un codigo de verificacion. Ingresalo junto con tu nueva
+              contrasena en la siguiente pantalla.
+            </p>
+            <a
+              href={`/reset-password?email=${encodeURIComponent(email)}`}
+              className="inline-flex items-center justify-center w-full py-3 px-4 rounded-xl font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors text-sm"
+            >
+              Ingresar codigo
+            </a>
 
             <div className="pt-4 border-t border-slate-800">
               <a href="/login" className="text-emerald-400 hover:text-emerald-300 font-semibold text-sm">

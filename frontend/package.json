@@ -9,7 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/core": "^0.41.3",
+    "@convex-dev/auth": "^0.0.88",
     "clsx": "^2.1.1",
+    "convex": "^1.23.0",
     "lucide-react": "^0.441.0",
     "next": "14.2.5",
     "react": "^18.3.1",

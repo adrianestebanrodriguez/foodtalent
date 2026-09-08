@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { loginAndStore } from "@/lib/api";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Loader2, ChefHat, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
+  const { signIn } = useAuthActions();
+  const syncMyProfile = useMutation(api.professionals.syncMyProfile);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,10 +20,11 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await loginAndStore(email, password);
+      await signIn("password", { email, password, flow: "signIn" });
+      await syncMyProfile({});
       window.location.href = "/";
     } catch (err: any) {
-      setError(err.message || "Error al iniciar sesion");
+      setError("Credenciales incorrectas. Verifica tu email y contrasena.");
     } finally {
       setLoading(false);
     }

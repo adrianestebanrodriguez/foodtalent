@@ -1,0 +1,54 @@
+[
+  {
+    "name": "Adrian Esteban Rodriguez",
+    "email": "adrianalvarezr@gmail.com",
+    "whatsapp": "+573152006387",
+    "specialties": [
+      "Snacks",
+      "Panificacion",
+      "Otro",
+      "Formulacion",
+      "Productividad",
+      "Procesos",
+      "cereaales",
+      "gestión de costos",
+      "diseño de alimentos",
+      "costos",
+      "machine learning",
+      "data science",
+      "ciencia de datos",
+      "diseño de apps",
+      "formulación de proyectos"
+    ],
+    "experienceYears": 22,
+    "availability": "inmediata",
+    "hourlyRate": "200",
+    "location": "Medellin",
+    "summary": "Científico de alimentos y científico de datos. Diseño alimentos con software. Monto departamentos de I+D, formulo proyectos para la creación de empresas de alimentos. Uso ciencia de Datos, bioinformática y machine learning para optimizar procesos de fabricación de alimentos, ventas y problemas de productividad. Mis áreas de mayor experiencia son cereales, panificación, transformación de vegetales y biotecnología (fermentación de precisión)",
+    "markdownContent": "---\nid: 6\nnombre: \"Adrian Esteban Rodriguez\"\nemail: \"adrianalvarezr@gmail.com\"\nsectores: [\"Snacks\", \"Panificacion\", \"Otro\", \"Formulacion\", \"Productividad\", \"Procesos\", \"cereaales\", \"gestión de costos\", \"diseño de alimentos\", \"costos\", \"machine learning\", \"data science\", \"ciencia de datos\", \"diseño de apps\", \"formulación de proyectos\"]\nanios_experiencia: 22\ndisponibilidad: \"inmediata\"\ntarifa: \"200\"\nubicacion: \"Medellin\"\nfuente: \"registered\"\nfecha_registro: \"2026-07-27\"\nverificado: false\n---\n\n## Experiencia\n\nCientífico de alimentos y científico de datos. Diseño alimentos con software. Monto departamentos de I+D, formulo proyectos para la creación de empresas de alimentos. Uso ciencia de Datos, bioinformática y machine learning para optimizar procesos de fabricación de alimentos, ventas y problemas de productividad. Mis áreas de mayor experiencia son cereales, panificación, transformación de vegetales y biotecnología (fermentación de precisión)\n\n\n## Productos de investigacion / desarrollo\n\n- Metabalance: App de coaching nutricional que entrega recomendaciones de nutrición con IA (https://appnutrition-nine.vercel.app/)\n- BPM Auditor software de visión artificial para inspección sanitaria de plantas de alimentos (https://adri.lat/bpmauditor/)\n- Somni Suplemento dietario para problemas de sueño y descanso (https://www.linkedin.com/posts/adrian-esteban-rodriguez_biohacking-foodtech-ugcPost-7480125008481038336-E-5M/?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAKtDaoBHpteBcHMiHV3XhOPFDjMxttk87w)\n\n\n## Ultima experiencia\n\n**Cliente:** FullWelness Canarias (España)\n\n**Que hizo:** Diseño de proyecto de franquicias para servicio de atención nutricional y diseño de 40 productos de nutrición de precisión para pérdida de peso\n\n**Logro:** Cerca de 1 millón de euros en facturación a cierre de 2025\n\n## Disponibilidad\n\ninmediata",
+    "source": "registered",
+    "sources": [],
+    "isVerified": false,
+    "rating": 0,
+    "projectsCompleted": 0,
+    "researchProducts": [
+      {
+        "url": "https://appnutrition-nine.vercel.app/",
+        "name": "Metabalance: App de coaching nutricional que entrega recomendaciones de nutrición con IA"
+      },
+      {
+        "url": "https://adri.lat/bpmauditor/",
+        "name": "BPM Auditor software de visión artificial para inspección sanitaria de plantas de alimentos"
+      },
+      {
+        "url": "https://www.linkedin.com/posts/adrian-esteban-rodriguez_biohacking-foodtech-ugcPost-7480125008481038336-E-5M/?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAKtDaoBHpteBcHMiHV3XhOPFDjMxttk87w",
+        "name": "Somni Suplemento dietario para problemas de sueño y descanso"
+      }
+    ],
+    "lastExperience": {
+      "client": "FullWelness Canarias (España)",
+      "achievement": "Cerca de 1 millón de euros en facturación a cierre de 2025",
+      "description": "Diseño de proyecto de franquicias para servicio de atención nutricional y diseño de 40 productos de nutrición de precisión para pérdida de peso"
+    }
+  }
+]

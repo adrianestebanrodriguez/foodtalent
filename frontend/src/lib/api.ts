@@ -1,6 +1,6 @@
 // Sanitizar la URL base para corregir faltas de slashes (ej. https:/) o barras al final
 function getSanitizedApiUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || "https://foodtalent.onrender.com";
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || "https://foodtalent-backend.vercel.app";
   
   let cleaned = envUrl.trim();
   // Corregir si viene como https:/ en vez de https://

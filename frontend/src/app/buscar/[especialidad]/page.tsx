@@ -1,37 +1,34 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import { toUIProfessional } from "@/lib/convexApi";
 import CategoryContent from "./CategoryContent";
+import { Loader2 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://foodtalent.onrender.com";
+export default function CategoryPage() {
+  const params = useParams();
+  const specialty = decodeURIComponent(params.especialidad as string);
+  const docs = useQuery(api.professionals.listProfessionals, {
+    skip: 0,
+    limit: 100,
+  });
 
-async function getProfessionalsBySpecialty(specialty: string) {
-  try {
-    const resp = await fetch(
-      `${API_URL}/api/professionals/search?q=${encodeURIComponent(specialty)}`,
-      { next: { revalidate: 3600 } }
+  if (docs === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
     );
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
   }
-}
 
-export async function generateMetadata({ params }: { params: { especialidad: string } }): Promise<Metadata> {
-  const specialty = decodeURIComponent(params.especialidad);
-  return {
-    title: `Consultores en ${specialty} | FoodTalent`,
-    description: `Encuentra los mejores consultores e ingenieros de alimentos especializados en ${specialty} en Latinoamérica. Conecta con expertos verificados en FoodTalent.`,
-    openGraph: {
-      title: `Consultores en ${specialty} | FoodTalent`,
-      description: `Expertos verificados en ${specialty}. Encuentra talento técnico para tu empresa.`,
-    },
-  };
-}
-
-export default async function CategoryPage({ params }: { params: { especialidad: string } }) {
-  const specialty = decodeURIComponent(params.especialidad);
-  const professionals = await getProfessionalsBySpecialty(specialty);
+  const professionals = docs
+    .map(toUIProfessional)
+    .filter(
+      (p): p is NonNullable<typeof p> =>
+        !!p && (p.specialties ?? []).includes(specialty),
+    );
 
   const jsonLd = {
     "@context": "https://schema.org",

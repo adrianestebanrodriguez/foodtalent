@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getProfessionalProfile, updateProfessionalProfile } from "@/lib/api";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
+import { toUIProfessional } from "@/lib/convexApi";
 import { Loader2, Plus, X, ChefHat, ArrowLeft, ExternalLink } from "lucide-react";
 
 interface ResearchProduct {
@@ -19,9 +22,13 @@ interface LastExperience {
 export default function EditProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const professionalId = params.id as Id<"professionals">;
+  const doc = useQuery(api.professionals.getProfessional, { professionalId });
+  const updateProfessional = useMutation(api.professionals.updateProfessional);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -54,31 +61,41 @@ export default function EditProfilePage() {
   };
 
   useEffect(() => {
-    if (!params.id) return;
-    getProfessionalProfile(Number(params.id))
-      .then((profile) => {
-        setForm({
-          name: profile.name || "",
-          email: profile.email || "",
-          summary: profile.summary || "",
-          experience_years: profile.experience_years || 0,
-          availability: profile.availability || "inmediata",
-          hourly_rate: profile.hourly_rate || "",
-          location: profile.location || "",
-        });
-        setSpecialties(profile.specialties || []);
-        setResearchProducts(
-          profile.research_products && profile.research_products.length > 0
-            ? profile.research_products
-            : [{ name: "", url: "" }]
-        );
-        if (profile.last_experience) {
-          setLastExperience(profile.last_experience);
-        }
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [params.id]);
+    if (!params.id || doc === undefined || loaded) return;
+    const profile = toUIProfessional(doc);
+    if (!profile) {
+      setError("Perfil no encontrado");
+      setLoading(false);
+      return;
+    }
+    setForm({
+      name: profile.name || "",
+      email: profile.email || "",
+      summary: profile.summary || "",
+      experience_years: profile.experience_years || 0,
+      availability: profile.availability || "inmediata",
+      hourly_rate: profile.hourly_rate || "",
+      location: profile.location || "",
+    });
+    setSpecialties(profile.specialties || []);
+    setResearchProducts(
+      profile.research_products && profile.research_products.length > 0
+        ? profile.research_products.map((p) => ({
+            name: p.name,
+            url: p.url || "",
+          }))
+        : [{ name: "", url: "" }]
+    );
+    if (profile.last_experience) {
+      setLastExperience({
+        client: profile.last_experience.client || "",
+        description: profile.last_experience.description || "",
+        achievement: profile.last_experience.achievement || "",
+      });
+    }
+    setLoaded(true);
+    setLoading(false);
+  }, [params.id, doc, loaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,11 +110,27 @@ export default function EditProfilePage() {
       const validResearch = researchProducts.filter((p) => p.name.trim());
       const hasLastExp = lastExperience.client.trim() || lastExperience.description.trim();
 
-      await updateProfessionalProfile(Number(params.id), {
-        ...form,
+      await updateProfessional({
+        professionalId,
+        name: form.name,
+        email: form.email || undefined,
+        summary: form.summary,
+        experience_years: form.experience_years,
+        availability: form.availability,
+        hourly_rate: form.hourly_rate || undefined,
+        location: form.location || undefined,
         specialties,
-        research_products: validResearch,
-        last_experience: hasLastExp ? lastExperience : null,
+        research_products: validResearch.map((p) => ({
+          name: p.name,
+          url: p.url || undefined,
+        })),
+        last_experience: hasLastExp
+          ? {
+              client: lastExperience.client || undefined,
+              description: lastExperience.description || undefined,
+              achievement: lastExperience.achievement || undefined,
+            }
+          : undefined,
       });
       router.push(`/profile/${params.id}`);
     } catch (err: any) {

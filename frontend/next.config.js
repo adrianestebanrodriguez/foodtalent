@@ -7,10 +7,12 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "https://foodtalent-backend.vercel.app";
     return [
       {
         source: "/api/:path*",
-        destination: "https://foodtalent.onrender.com/api/:path*",
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },

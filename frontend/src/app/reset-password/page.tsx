@@ -2,14 +2,17 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { apiRequest } from "@/lib/api";
-import { Loader2, ChefHat, CheckCircle, AlertCircle } from "lucide-react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { Loader2, ChefHat, CheckCircle } from "lucide-react";
 
 // 1. Componente hijo con toda la lógica y hooks de lectura de la URL
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+  const { signIn } = useAuthActions();
+  const presetEmail = searchParams.get("email") || "";
 
+  const [email, setEmail] = useState(presetEmail);
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,34 +34,19 @@ function ResetPasswordContent() {
 
     setLoading(true);
     try {
-      await apiRequest("/api/auth/reset-password", {
-        method: "POST",
-        body: JSON.stringify({ token, password }),
+      await signIn("password", {
+        email,
+        code,
+        newPassword: password,
+        flow: "reset-verification",
       });
       setDone(true);
     } catch (err: any) {
-      setError(err.message || "Error al restablecer la contraseña");
+      setError("Codigo invalido o expirado. Solicita uno nuevo.");
     } finally {
       setLoading(false);
     }
   };
-
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center max-w-md w-full">
-          <div className="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-7 h-7 text-red-400" />
-          </div>
-          <h1 className="text-xl font-bold text-white mb-2">Enlace inválido</h1>
-          <p className="text-slate-400 text-sm mb-6">El enlace de recuperación no es válido o está incompleto.</p>
-          <a href="/forgot-password" className="text-emerald-400 hover:text-emerald-300 font-semibold text-sm">
-            Solicitar nuevo enlace
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
@@ -86,13 +74,27 @@ function ResetPasswordContent() {
         ) : (
           <form onSubmit={handleSubmit} className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 space-y-5">
             <h1 className="text-xl font-bold text-white mb-1">Nueva contraseña</h1>
-            <p className="text-sm text-slate-400 mb-2">Elige una contraseña nueva para tu cuenta.</p>
+            <p className="text-sm text-slate-400 mb-2">Ingresa el codigo que enviamos a tu email y elige una contrasena nueva.</p>
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Correo electronico</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 focus:bg-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm text-white placeholder:text-slate-500"
+                placeholder="tu@email.com" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Codigo de verificacion</label>
+              <input type="text" required value={code} onChange={(e) => setCode(e.target.value.trim())}
+                className="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 focus:bg-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm text-white placeholder:text-slate-500"
+                placeholder="Codigo de 8 digitos" />
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Nueva contraseña</label>

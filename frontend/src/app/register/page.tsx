@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { register, createProfessionalProfile } from "@/lib/api";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Loader2, Plus, X, ChefHat, ArrowRight, CheckCircle, ExternalLink } from "lucide-react";
 
 const SECTORES = ["Carnicos", "Lacteos", "Bebidas", "Panificacion", "Snacks", "Otro"];
@@ -19,6 +21,9 @@ interface LastExperience {
 }
 
 export default function RegisterPage() {
+  const { signIn } = useAuthActions();
+  const syncMyProfile = useMutation(api.professionals.syncMyProfile);
+  const createProfessional = useMutation(api.professionals.createProfessional);
   const [paso, setPaso] = useState<"cuenta" | "perfil" | "listo">("cuenta");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,12 +70,11 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const resp = await register(email, password, "profesional", fullName);
-      localStorage.setItem("foodtalent_token", resp.access_token);
-      if (resp.role) localStorage.setItem("foodtalent_role", resp.role);
+      await signIn("password", { email, password, flow: "signUp" });
+      await syncMyProfile({ role: "profesional", fullName });
       setPaso("perfil");
     } catch (err: any) {
-      setError(err.message || "No pudimos crear tu cuenta. Intenta de nuevo.");
+      setError("No pudimos crear tu cuenta. Si el email ya existe, inicia sesion.");
     } finally {
       setLoading(false);
     }
@@ -89,18 +93,27 @@ export default function RegisterPage() {
       const validResearch = researchProducts.filter((p) => p.name.trim());
       const hasLastExp = lastExperience.client.trim() || lastExperience.description.trim();
 
-      await createProfessionalProfile({
+      await createProfessional({
         name: fullName,
         email,
         specialties: [...sectores, ...categorias],
         experience_years: anosExperiencia,
         availability: disponibilidad,
-        hourly_rate: tarifa,
-        location: ubicacion,
-        whatsapp,
+        hourly_rate: tarifa || undefined,
+        location: ubicacion || undefined,
+        whatsapp: whatsapp || undefined,
         summary: resumenExperiencia,
-        research_products: validResearch,
-        last_experience: hasLastExp ? lastExperience : null,
+        research_products: validResearch.map((p) => ({
+          name: p.name,
+          url: p.url || undefined,
+        })),
+        last_experience: hasLastExp
+          ? {
+              client: lastExperience.client || undefined,
+              description: lastExperience.description || undefined,
+              achievement: lastExperience.achievement || undefined,
+            }
+          : undefined,
       });
       setPaso("listo");
     } catch (err: any) {

@@ -1,68 +1,59 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getAuthToken } from "@/lib/api";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { downloadJson } from "@/lib/convexApi";
 import { Download, ArrowLeft, Shield, Search } from "lucide-react";
 
 export default function AdminPage() {
-  const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const [isSuperuser, setIsSuperuser] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportingLogs, setExportingLogs] = useState(false);
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const myProfile = useQuery(
+    api.professionals.myProfile,
+    isAuthenticated ? {} : "skip",
+  );
+  const isSuperuser = myProfile?.isSuperuser === true;
+
+  const [wantPros, setWantPros] = useState(false);
+  const [wantLogs, setWantLogs] = useState(false);
+  const professionals = useQuery(
+    api.professionals.exportProfessionalsJson,
+    isSuperuser && wantPros ? {} : "skip",
+  );
+  const searchLogs = useQuery(
+    api.professionals.exportSearchLogs,
+    isSuperuser && wantLogs ? {} : "skip",
+  );
 
   useEffect(() => {
-    const t = getAuthToken();
-    setToken(t);
-    if (t) {
-      try {
-        const payload = JSON.parse(atob(t.split(".")[1]));
-        setIsSuperuser(payload.is_superuser === true);
-      } catch {}
+    if (professionals) {
+      downloadJson(
+        `foodtalent_professionals_${new Date().toISOString().slice(0, 10)}.json`,
+        professionals,
+      );
+      setWantPros(false);
     }
-  }, []);
+  }, [professionals]);
 
-  const downloadFile = async (url: string, filename: string, setLoading: (v: boolean) => void) => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const resp = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        alert(err.detail || "Error al exportar");
-        return;
-      }
-      const blob = await resp.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch {
-      alert("Error al descargar el archivo");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (searchLogs) {
+      downloadJson(
+        `foodtalent_search_logs_${new Date().toISOString().slice(0, 10)}.json`,
+        searchLogs,
+      );
+      setWantLogs(false);
     }
-  };
+  }, [searchLogs]);
 
-  const handleExportProfessionals = () =>
-    downloadFile(
-      "/api/professionals/export/json",
-      `foodtalent_professionals_${new Date().toISOString().slice(0, 10)}.json`,
-      setExporting
+  if (isLoading || (isAuthenticated && myProfile === undefined)) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <p className="text-slate-400">Cargando...</p>
+      </div>
     );
+  }
 
-  const handleExportSearchLogs = () =>
-    downloadFile(
-      "/api/search/export/json",
-      `foodtalent_search_logs_${new Date().toISOString().slice(0, 10)}.json`,
-      setExportingLogs
-    );
-
-  if (!token) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <p className="text-slate-400">Debes iniciar sesión para acceder aquí.</p>
@@ -97,12 +88,12 @@ export default function AdminPage() {
             Descarga un archivo JSON con todos los profesionales registrados en la plataforma.
           </p>
           <button
-            onClick={handleExportProfessionals}
-            disabled={exporting || !isSuperuser}
+            onClick={() => setWantPros(true)}
+            disabled={wantPros || !isSuperuser}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
-            {exporting ? "Exportando..." : "Descargar backup JSON"}
+            {wantPros ? "Exportando..." : "Descargar backup JSON"}
           </button>
           {!isSuperuser && (
             <p className="text-xs text-amber-400 mt-3">Solo administradores pueden exportar datos.</p>
@@ -119,12 +110,12 @@ export default function AdminPage() {
             Descarga un archivo JSON con todas las búsquedas realizadas en la plataforma, incluyendo el desafío, fecha, hora y resultados.
           </p>
           <button
-            onClick={handleExportSearchLogs}
-            disabled={exportingLogs || !isSuperuser}
+            onClick={() => setWantLogs(true)}
+            disabled={wantLogs || !isSuperuser}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Search className="w-4 h-4" />
-            {exportingLogs ? "Exportando..." : "Descargar historial JSON"}
+            {wantLogs ? "Exportando..." : "Descargar historial JSON"}
           </button>
           {!isSuperuser && (
             <p className="text-xs text-amber-400 mt-3">Solo administradores pueden exportar datos.</p>

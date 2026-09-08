@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Search, Loader2, ArrowRight, Sparkles, ChefHat, ExternalLink, Play, Globe, User } from "lucide-react";
-import { searchProfessionals, getAuthToken, getMyProfessionalProfile } from "@/lib/api";
+import { useConvexAuth, useQuery, useAction } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { api } from "../../convex/_generated/api";
 import { ResultCard } from "@/components/ResultCard";
 
 const PLACEHOLDERS = [
@@ -13,6 +15,17 @@ const PLACEHOLDERS = [
 ];
 
 export default function HomePage() {
+  const { isAuthenticated } = useConvexAuth();
+  const { signOut } = useAuthActions();
+  const runSearch = useAction(api.search.search);
+  const myProfile = useQuery(
+    api.professionals.myProfile,
+    isAuthenticated ? {} : "skip",
+  );
+  const myProfessional = useQuery(
+    api.professionals.getMyProfessional,
+    isAuthenticated ? {} : "skip",
+  );
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<any[]>([]);
@@ -20,26 +33,9 @@ export default function HomePage() {
   const [placeholder] = useState(
     () => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)]
   );
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [userId, setUserId] = useState<number | null>(null);
-  const [professionalId, setProfessionalId] = useState<number | null>(null);
-  const [isSuperuser, setIsSuperuser] = useState(false);
-
-  useEffect(() => {
-    const token = getAuthToken();
-    setLoggedIn(!!token);
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const uid = parseInt(payload.sub);
-        setUserId(uid);
-        setIsSuperuser(payload.is_superuser === true);
-        getMyProfessionalProfile()
-          .then((prof) => setProfessionalId(prof.id))
-          .catch(() => {});
-      } catch {}
-    }
-  }, []);
+  const loggedIn = isAuthenticated;
+  const professionalId = myProfessional ? String(myProfessional._id) : null;
+  const isSuperuser = myProfile?.isSuperuser === true;
 
   const handleSearch = useCallback(async () => {
     if (query.trim().length < 10) return;
@@ -49,14 +45,14 @@ export default function HomePage() {
     setResults([]);
 
     try {
-      const data = await searchProfessionals(query);
+      const data = await runSearch({ query });
       setResults(data);
     } catch (err) {
       setError("Algo no salio bien. Intenta de nuevo en un momento.");
     } finally {
       setIsSearching(false);
     }
-  }, [query]);
+  }, [query, runSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSearch();
@@ -85,18 +81,14 @@ export default function HomePage() {
                       Admin
                     </a>
                   )}
-                  <a href={`/profile/${professionalId}/edit`} className="flex items-center gap-1.5 text-slate-300 hover:text-white text-sm font-medium transition-colors">
-                    <User className="w-4 h-4" />
-                    Mi perfil
-                  </a>
+                  {professionalId && (
+                    <a href={`/profile/${professionalId}/edit`} className="flex items-center gap-1.5 text-slate-300 hover:text-white text-sm font-medium transition-colors">
+                      <User className="w-4 h-4" />
+                      Mi perfil
+                    </a>
+                  )}
                   <button
-                    onClick={() => {
-                      localStorage.removeItem("foodtalent_token");
-                      localStorage.removeItem("foodtalent_role");
-                      setLoggedIn(false);
-                      setUserId(null);
-                      setIsSuperuser(false);
-                    }}
+                    onClick={() => signOut()}
                     className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
                   >
                     Cerrar sesion
