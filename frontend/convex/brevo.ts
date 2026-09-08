@@ -3,7 +3,7 @@
 export default function Brevo(config: any) {
   return {
     id: "brevo",
-    type: "email",
+    type: "email" as const,
     name: "Brevo",
     from: "FoodTalent <alquimiafoods@proton.me>",
     maxAge: 24 * 60 * 60,
