@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as brevo from "../brevo.js";
 import type * as crons from "../crons.js";
 import type * as gemini from "../gemini.js";
 import type * as http from "../http.js";
@@ -26,6 +27,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  brevo: typeof brevo;
   crons: typeof crons;
   gemini: typeof gemini;
   http: typeof http;
