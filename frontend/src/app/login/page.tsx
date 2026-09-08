@@ -24,7 +24,18 @@ export default function LoginPage() {
       await syncMyProfile({});
       window.location.href = "/";
     } catch (err: any) {
-      setError("Credenciales incorrectas. Verifica tu email y contrasena.");
+      const msg = err?.message ?? "";
+      if (msg.includes("InvalidSecret") || msg.includes("InvalidAccountId")) {
+        setError("Credenciales incorrectas. Verifica tu email y contrasena.");
+      } else if (msg.includes("TooManyFailedAttempts")) {
+        setError("Demasiados intentos fallidos. Espera unos minutos y vuelve a intentar.");
+      } else if (msg.includes("rate")) {
+        setError("Se ha superado el limite de intentos. Intenta de nuevo en un momento.");
+      } else if (msg === "Load failed" || msg.includes("fetch") || msg.includes("Failed to fetch")) {
+        setError("Problema de conexion. Intenta de nuevo.");
+      } else {
+        setError(msg || "No se pudo iniciar sesion. Intenta de nuevo.");
+      }
     } finally {
       setLoading(false);
     }
