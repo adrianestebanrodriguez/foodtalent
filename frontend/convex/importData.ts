@@ -61,3 +61,37 @@ export const linkEmbedding = mutation({
     return await ctx.db.get(args.professionalId);
   },
 });
+
+// Create an admin account directly (email + pre-computed scrypt hash).
+export const createAdminUser = mutation({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    secretHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .first();
+    if (existing) throw new Error("User already exists");
+    const userId = await ctx.db.insert("users", {
+      name: args.name,
+      email: args.email,
+    });
+    await ctx.db.insert("authAccounts", {
+      userId,
+      provider: "password",
+      providerAccountId: args.email,
+      secret: args.secretHash,
+    });
+    const profileId = await ctx.db.insert("profiles", {
+      userId,
+      role: "admin",
+      fullName: args.name,
+      isActive: true,
+      isSuperuser: true,
+    });
+    return { userId, profileId };
+  },
+});
