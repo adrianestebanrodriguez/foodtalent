@@ -10,6 +10,8 @@ export default function Brevo(config: any) {
     async sendVerificationRequest(params: any) {
       const { identifier: to, provider, url, token } = params;
       const { host } = new URL(url);
+      const match = /<([^>]+)>/.exec(provider.from);
+      const senderEmail = match ? match[1] : provider.from;
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -17,7 +19,7 @@ export default function Brevo(config: any) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sender: { email: provider.from, name: "FoodTalent" },
+          sender: { email: senderEmail, name: "FoodTalent" },
           to: [{ email: to }],
           subject: `Recupera tu contraseña en ${host}`,
           htmlContent:
