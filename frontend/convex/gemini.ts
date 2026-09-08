@@ -2,7 +2,7 @@
 // Models: gemini-2.0-flash (chat) + gemini-embedding-001 @768d (vectors).
 
 const EMBED_MODEL = "gemini-embedding-001";
-const CHAT_MODEL = "gemini-2.0-flash";
+const CHAT_MODEL = "gemini-3.6-flash";
 
 function keyPool(): string[] {
   const raw = process.env.GEMINI_API_KEY ?? "";
@@ -47,7 +47,7 @@ export async function embedContent(
 
 export async function generateContent(
   prompt: string,
-  maxOutputTokens = 2048,
+  maxOutputTokens = 8192,
 ): Promise<string | null> {
   const keys = keyPool();
   for (const key of keys.length ? keys : [""]) {
@@ -126,8 +126,9 @@ Usa todo el rango. El porcentaje debe reflejar la afinidad REAL.
 - Si un candidato no tiene relacion con el reto, NO lo incluyas
 - match_percentage SOLO entre 70 y 100
 - Responde SOLO JSON valido, sin markdown, sin backticks, sin texto adicional
+- El campo professional_id debe ser EXACTAMENTE el ID entre parentesis "(ID: ...)" de cada candidato, no el numero de la lista
 
-Formato: {"results":[{"professional_id":1,"match_percentage":92,"explanation":"..."}]}`;
+Formato: {"results":[{"professional_id":"<id_exacto>","match_percentage":92,"explanation":"..."}]}`;
 }
 
 export interface Candidate {
@@ -279,10 +280,17 @@ export async function rerankAndExplain(
     const byId = new Map(candidates.map((c) => [c.id, c]));
     const enriched = results
       .map((r) => {
-        const c = byId.get(r.professional_id);
+        // The model may return the exact id ("k17...") or the 1-based
+        // positional index of the candidate ("1", "2", ...). Accept both.
+        let c = byId.get(r.professional_id) as Candidate | undefined;
+        if (!c && typeof r.professional_id === "number") {
+          c = candidates[r.professional_id - 1];
+        } else if (!c && /^\d+$/.test(String(r.professional_id))) {
+          c = candidates[Number(r.professional_id) - 1];
+        }
         if (!c) return null;
         return toMatch(
-          r.professional_id,
+          c.id,
           r.match_percentage ?? 0,
           r.explanation ?? "",
           c,
