@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
-import { LogOut, User, ChefHat } from "lucide-react";
+import { LogOut, User, ChefHat, Shield } from "lucide-react";
 
 interface UserInfo {
   professionalId: string | null;
@@ -65,6 +65,15 @@ export default function NavBar() {
           <div className="flex items-center gap-3">
             {user ? (
               <>
+                {user.isSuperuser && (
+                  <a
+                    href="/admin"
+                    className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 text-sm font-medium transition-colors"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Administracion
+                  </a>
+                )}
                 {profileId && (
                   <a
                     href={`/profile/${profileId}/edit`}

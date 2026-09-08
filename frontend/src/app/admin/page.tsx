@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { downloadJson } from "@/lib/convexApi";
-import { Download, ArrowLeft, Shield, Search } from "lucide-react";
+import { Download, ArrowLeft, Shield, Search, Users, KeyRound } from "lucide-react";
 
 export default function AdminPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -24,6 +24,34 @@ export default function AdminPage() {
     api.professionals.exportSearchLogs,
     isSuperuser && wantLogs ? {} : "skip",
   );
+  const users = useQuery(
+    api.professionals.listRegisteredUsers,
+    isSuperuser ? {} : "skip",
+  );
+  const resetPassword = useMutation(api.professionals.resetProfessionalPassword);
+  const [resettingEmail, setResettingEmail] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const handleResetPassword = async (email: string) => {
+    const newPassword = window.prompt(
+      `Ingresa la nueva contraseña (min. 8 caracteres) para:\n${email}`,
+    );
+    if (!newPassword) return;
+    if (newPassword.length < 8) {
+      setMessage({ type: "err", text: "La contraseña debe tener al menos 8 caracteres." });
+      return;
+    }
+    setResettingEmail(email);
+    setMessage(null);
+    try {
+      await resetPassword({ email, newPassword });
+      setMessage({ type: "ok", text: `Contraseña actualizada para ${email}.` });
+    } catch (e: any) {
+      setMessage({ type: "err", text: e?.message ?? "Error al resetear la contraseña." });
+    } finally {
+      setResettingEmail(null);
+    }
+  };
 
   useEffect(() => {
     if (professionals) {
@@ -119,6 +147,85 @@ export default function AdminPage() {
           </button>
           {!isSuperuser && (
             <p className="text-xs text-amber-400 mt-3">Solo administradores pueden exportar datos.</p>
+          )}
+        </div>
+
+        {/* Registered users */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Users className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-lg font-semibold text-white">Usuarios registrados</h2>
+          </div>
+          <p className="text-sm text-slate-400 mb-6">
+            Lista de cuentas registradas en la plataforma. Puedes restablecer la contraseña de
+            cualquier profesional (el sistema guarda las contraseñas cifradas, por eso se resetean
+            en vez de mostrarse).
+          </p>
+          {message && (
+            <div
+              className={
+                "px-4 py-3 rounded-xl text-sm mb-4 " +
+                (message.type === "ok"
+                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                  : "bg-red-500/10 border border-red-500/20 text-red-400")
+              }
+            >
+              {message.text}
+            </div>
+          )}
+          {users === undefined ? (
+            <p className="text-slate-500 text-sm">Cargando...</p>
+          ) : users.length === 0 ? (
+            <p className="text-slate-500 text-sm">No hay usuarios registrados.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-400 border-b border-slate-800">
+                    <th className="py-2 pr-4 font-medium">Nombre</th>
+                    <th className="py-2 pr-4 font-medium">Email</th>
+                    <th className="py-2 pr-4 font-medium">Rol</th>
+                    <th className="py-2 pr-4 font-medium">Estado</th>
+                    <th className="py-2 font-medium">Accion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u: any) => (
+                    <tr key={u.userId} className="border-b border-slate-800/60">
+                      <td className="py-3 pr-4 text-white">{u.fullName ?? "-"}</td>
+                      <td className="py-3 pr-4 text-slate-300">{u.email ?? "-"}</td>
+                      <td className="py-3 pr-4 text-slate-400">{u.role}</td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={
+                            "px-2 py-0.5 rounded-full text-xs " +
+                            (u.isActive
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-red-500/10 text-red-400")
+                          }
+                        >
+                          {u.isActive ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        {u.role === "admin" && u.isSuperuser ? (
+                          <span className="text-slate-600 text-xs">(admin)</span>
+                        ) : (
+                          <button
+                            onClick={() => handleResetPassword(u.email)}
+                            disabled={resettingEmail === u.email || !u.email}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                            {resettingEmail === u.email ? "Reseteando..." : "Resetear clave"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

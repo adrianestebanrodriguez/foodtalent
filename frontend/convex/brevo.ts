@@ -1,6 +1,6 @@
 // Brevo (Sendinblue) email provider for Convex Auth password reset.
 // Reads AUTH_BREVO_API_KEY and AUTH_BREVO_FROM from the Convex environment.
-export default function Brevo(config: any) {
+export default function Brevo(config?: any) {
   return {
     id: "brevo",
     type: "email" as const,

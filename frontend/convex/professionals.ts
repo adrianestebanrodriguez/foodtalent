@@ -8,6 +8,7 @@ import {
 import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { embedContent, professionalToMarkdown } from "./gemini";
+import { Scrypt } from "lucia";
 
 const researchProduct = v.object({
   name: v.string(),
@@ -408,5 +409,61 @@ export const exportSearchLogs = query({
       .query("searchLogs")
       .order("desc")
       .take(5000);
+  },
+});
+
+// --- admin: list registered users & reset passwords -------------------------
+
+export const listRegisteredUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const { profile } = await requireProfile(ctx);
+    if (!profile.isSuperuser) throw new Error("Solo administradores");
+    const profiles = await ctx.db.query("profiles").collect();
+    const rows = await Promise.all(
+      profiles.map(async (p) => {
+        const user = p.userId ? await ctx.db.get(p.userId) : null;
+        return {
+          userId: p.userId,
+          email: user?.email ?? null,
+          fullName: p.fullName ?? user?.name ?? null,
+          role: p.role,
+          isSuperuser: p.isSuperuser ?? false,
+          isActive: p.isActive,
+        };
+      }),
+    );
+    return rows.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""));
+  },
+});
+
+export const resetProfessionalPassword = mutation({
+  args: {
+    email: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { profile } = await requireProfile(ctx);
+    if (!profile.isSuperuser) throw new Error("Solo administradores");
+    if (args.newPassword.length < 8)
+      throw new Error("La contraseña debe tener al menos 8 caracteres");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q: any) => q.eq("email", args.email))
+      .first();
+    if (!user) throw new Error("No existe un usuario registrado con ese email");
+    const secret = await new Scrypt().hash(args.newPassword);
+    const existingAccount = await ctx.db
+      .query("authAccounts")
+      .withIndex(
+        "providerAndAccountId",
+        (q: any) =>
+          q.eq("provider", "password").eq("providerAccountId", args.email),
+      )
+      .unique();
+    if (!existingAccount)
+      throw new Error("El usuario no tiene una cuenta con contraseña");
+    await ctx.db.patch(existingAccount._id, { secret });
+    return { ok: true, email: args.email };
   },
 });
