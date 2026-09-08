@@ -5,7 +5,7 @@ export default function Brevo(config: any) {
     id: "brevo",
     type: "email" as const,
     name: "Brevo",
-    from: "FoodTalent <alquimiafoods@proton.me>",
+    from: process.env.AUTH_BREVO_FROM ?? "FoodTalent <adrianalvarezr@gmail.com>",
     maxAge: 24 * 60 * 60,
     async sendVerificationRequest(params: any) {
       const { identifier: to, provider, url, token } = params;
