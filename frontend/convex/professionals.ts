@@ -45,7 +45,7 @@ async function requireUserId(ctx: {
   return extractUserId(identity);
 }
 
-function extractUserId(identity: { subject: string }) {
+function extractUserId(identity: { subject: string }): any {
   return identity.subject.includes("|")
     ? identity.subject.split("|")[0]
     : identity.subject;
@@ -425,20 +425,45 @@ export const listRegisteredUsers = query({
   handler: async (ctx) => {
     const { profile } = await requireProfile(ctx);
     if (!profile.isSuperuser) throw new Error("Solo administradores");
+
+    const seen = new Set<string>();
+    const rows: any[] = [];
+
+    // 1) Users that already have an auth profile.
     const profiles = await ctx.db.query("profiles").collect();
-    const rows = await Promise.all(
-      profiles.map(async (p) => {
-        const user = p.userId ? await ctx.db.get(p.userId) : null;
-        return {
-          userId: p.userId,
-          email: user?.email ?? null,
-          fullName: p.fullName ?? user?.name ?? null,
-          role: p.role,
-          isSuperuser: p.isSuperuser ?? false,
-          isActive: p.isActive,
-        };
-      }),
-    );
+    for (const p of profiles) {
+      const user = p.userId ? await ctx.db.get(p.userId) : null;
+      const email = user?.email ?? null;
+      if (email) seen.add(email.toLowerCase());
+      rows.push({
+        userId: p.userId,
+        email,
+        fullName: p.fullName ?? user?.name ?? null,
+        role: p.role,
+        isSuperuser: p.isSuperuser ?? false,
+        isActive: p.isActive,
+        hasAccount: true,
+      });
+    }
+
+    // 2) Directory professionals that don't have an account yet.
+    const pros = await ctx.db.query("professionals").collect();
+    for (const pr of pros) {
+      const email = pr.email;
+      if (!email) continue;
+      if (seen.has(email.toLowerCase())) continue;
+      seen.add(email.toLowerCase());
+      rows.push({
+        userId: pr.userId ?? null,
+        email,
+        fullName: pr.name,
+        role: "profesional",
+        isSuperuser: false,
+        isActive: true,
+        hasAccount: false,
+      });
+    }
+
     return rows.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""));
   },
 });
@@ -453,23 +478,60 @@ export const resetProfessionalPassword = mutation({
     if (!profile.isSuperuser) throw new Error("Solo administradores");
     if (args.newPassword.length < 8)
       throw new Error("La contraseña debe tener al menos 8 caracteres");
+    const email = args.email.trim().toLowerCase();
+    const secret = await new Scrypt().hash(args.newPassword);
+
     const user = await ctx.db
       .query("users")
-      .withIndex("email", (q: any) => q.eq("email", args.email))
+      .withIndex("email", (q: any) => q.eq("email", email))
       .first();
-    if (!user) throw new Error("No existe un usuario registrado con ese email");
-    const secret = await new Scrypt().hash(args.newPassword);
-    const existingAccount = await ctx.db
-      .query("authAccounts")
-      .withIndex(
-        "providerAndAccountId",
-        (q: any) =>
-          q.eq("provider", "password").eq("providerAccountId", args.email),
-      )
-      .unique();
-    if (!existingAccount)
-      throw new Error("El usuario no tiene una cuenta con contraseña");
-    await ctx.db.patch(existingAccount._id, { secret });
-    return { ok: true, email: args.email };
+
+    // Existing account -> reset its password.
+    if (user) {
+      const existingAccount = await ctx.db
+        .query("authAccounts")
+        .withIndex(
+          "providerAndAccountId",
+          (q: any) =>
+            q.eq("provider", "password").eq("providerAccountId", email),
+        )
+        .unique();
+      if (existingAccount) {
+        await ctx.db.patch(existingAccount._id, { secret });
+      } else {
+        await ctx.db.insert("authAccounts", {
+          userId: user._id,
+          provider: "password",
+          providerAccountId: email,
+          secret,
+        });
+      }
+      return { ok: true, email, created: false };
+    }
+
+    // No account yet -> create one so the professional can log in.
+    const professional = await ctx.db
+      .query("professionals")
+      .filter((q: any) => q.eq(q.field("email"), email))
+      .first();
+    const fullName = professional?.name ?? email;
+    const userId = await ctx.db.insert("users", { name: fullName, email });
+    await ctx.db.insert("authAccounts", {
+      userId,
+      provider: "password",
+      providerAccountId: email,
+      secret,
+    });
+    await ctx.db.insert("profiles", {
+      userId,
+      role: "profesional",
+      fullName,
+      isActive: true,
+      isSuperuser: false,
+    });
+    if (professional) {
+      await ctx.db.patch(professional._id, { userId });
+    }
+    return { ok: true, email, created: true };
   },
 });

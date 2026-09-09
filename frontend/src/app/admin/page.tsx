@@ -159,7 +159,7 @@ export default function AdminPage() {
           <p className="text-sm text-slate-400 mb-6">
             Lista de cuentas registradas en la plataforma. Puedes restablecer la contraseña de
             cualquier profesional (el sistema guarda las contraseñas cifradas, por eso se resetean
-            en vez de mostrarse).
+            en vez de mostrarse). Si el profesional no tiene cuenta aun, esta se crea al asignar la clave.
           </p>
           {message && (
             <div
@@ -185,16 +185,29 @@ export default function AdminPage() {
                     <th className="py-2 pr-4 font-medium">Nombre</th>
                     <th className="py-2 pr-4 font-medium">Email</th>
                     <th className="py-2 pr-4 font-medium">Rol</th>
+                    <th className="py-2 pr-4 font-medium">Cuenta</th>
                     <th className="py-2 pr-4 font-medium">Estado</th>
                     <th className="py-2 font-medium">Accion</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u: any) => (
-                    <tr key={u.userId} className="border-b border-slate-800/60">
+                    <tr key={u.userId ?? u.email} className="border-b border-slate-800/60">
                       <td className="py-3 pr-4 text-white">{u.fullName ?? "-"}</td>
                       <td className="py-3 pr-4 text-slate-300">{u.email ?? "-"}</td>
                       <td className="py-3 pr-4 text-slate-400">{u.role}</td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={
+                            "px-2 py-0.5 rounded-full text-xs " +
+                            (u.hasAccount
+                              ? "bg-slate-500/10 text-slate-300"
+                              : "bg-amber-500/10 text-amber-400")
+                          }
+                        >
+                          {u.hasAccount ? "Con cuenta" : "Sin cuenta"}
+                        </span>
+                      </td>
                       <td className="py-3 pr-4">
                         <span
                           className={
@@ -217,7 +230,11 @@ export default function AdminPage() {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <KeyRound className="w-3.5 h-3.5" />
-                            {resettingEmail === u.email ? "Reseteando..." : "Resetear clave"}
+                            {resettingEmail === u.email
+                              ? "Procesando..."
+                              : u.hasAccount
+                              ? "Resetear clave"
+                              : "Crear acceso"}
                           </button>
                         )}
                       </td>
