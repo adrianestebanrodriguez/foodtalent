@@ -42,7 +42,13 @@ async function requireUserId(ctx: {
 }) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("No autenticado");
-  return identity.subject as any;
+  return extractUserId(identity);
+}
+
+function extractUserId(identity: { subject: string }) {
+  return identity.subject.includes("|")
+    ? identity.subject.split("|")[0]
+    : identity.subject;
 }
 
 async function requireProfile(
@@ -362,7 +368,7 @@ export const syncMyProfile = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const userId = identity.subject as any;
+    const userId = extractUserId(identity);
     const existing = await ctx.db
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -386,7 +392,7 @@ export const myProfile = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const userId = identity.subject as any;
+    const userId = extractUserId(identity);
     return await ctx.db
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -399,7 +405,7 @@ export const exportSearchLogs = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("No autenticado");
-    const userId = identity.subject as any;
+    const userId = extractUserId(identity);
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
